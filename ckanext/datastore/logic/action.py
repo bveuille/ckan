@@ -70,6 +70,12 @@ def datastore_create(context, data_dict):
         {"function": "trigger_clean_reference"},
         {"function": "trigger_check_codes"}]
     :type triggers: list of dictionaries
+    :param calculate_record_count: updates the stored count of records, used to
+        optimize datastore_search in combination with the
+        `total_estimation_threshold` parameter. If doing a series of
+        `datastore_create` calls on a resource, you only need to set this to
+        True on the last one.
+    :type calculate_record_count: bool (optional, default: False)
 
     Please note that setting the ``aliases``, ``indexes`` or ``primary_key``
     replaces the exising aliases or constraints. Setting ``records`` appends
@@ -151,6 +157,9 @@ def datastore_create(context, data_dict):
         result = backend.create(context, data_dict)
     except InvalidDataError as err:
         raise p.toolkit.ValidationError(text_type(err))
+
+    if data_dict.get('calculate_record_count', False):
+        backend.calculate_record_count(data_dict['resource_id'])
 
     # Set the datastore_active flag on the resource if necessary
     model = _get_or_bust(context, 'model')
@@ -665,6 +674,7 @@ def datastore_analyze(context, data_dict):
     connection = backend._get_write_engine().connect()
 
     result = backend.analyze(context, data_dict)
+    calculate_record_count(data_dict['resource_id'])
     #move to backend/postgres.py
     sql = 'ANALYZE "{}"'.format(data_dict['resource_id'])
     try:

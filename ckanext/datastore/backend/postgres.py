@@ -2016,3 +2016,17 @@ def _programming_error_summary(pe):
     # first line only, after the '(ProgrammingError)' text
     message = pe.args[0].split('\n')[0].decode('utf8')
     return message.split(u') ', 1)[-1]
+
+
+def calculate_row_count(resource_id):
+    '''
+    Calculate an estimate of the row count and store it in Postgresql's
+    pg_stat_user_tables. This number will be used when specifying
+    `total_estimation_threshold`
+    '''
+    connection = get_write_engine().connect()
+    sql = 'ANALYZE "{}"'.format(resource_id)
+    try:
+        results = connection.execute(sql)
+    except sqlalchemy.exc.DatabaseError as err:
+        raise DatastoreException(err)
